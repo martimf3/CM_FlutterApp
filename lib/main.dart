@@ -1,4 +1,5 @@
 import 'package:cm_flutter_app/screens/main_page_screen.dart';
+import 'package:cm_flutter_app/screens/resgister_screen.dart';
 import 'package:cm_flutter_app/themeProvider/theme_provider.dart';
 import 'package:flutter/material.dart';
 
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
       theme: MyThemes.lightTheme,
       darkTheme: MyThemes.darkTheme,
       debugShowCheckedModeBanner: false,
-      home: const MainScreen(),
+      home: const RegisterScreen(),
     );
   }
 }
