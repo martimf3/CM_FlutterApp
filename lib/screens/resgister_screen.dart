@@ -1,7 +1,12 @@
+import 'package:cm_flutter_app/screens/login_screen.dart';
+import 'package:cm_flutter_app/screens/main_page_screen.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cm_flutter_app/global/global.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -24,6 +29,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
   //declare a GlobalKey
   final _formKey = GlobalKey<FormState>();
 
+  void _submit() async {
+    //validate all the fields
+    if(_formKey.currentState!.validate()) {
+      await firebaseAuth.createUserWithEmailAndPassword(
+        email: emailTextEditingController.text.trim(),
+        password: passwordTextEditingController.text.trim()
+      ).then((auth) async {
+        currentUser = auth.user;
+
+        if(currentUser != null){
+          Map userMap = {
+            "id": currentUser!.uid,
+            "name": nameTextEditingController.text.trim(),
+            "email": emailTextEditingController.text.trim(),
+            "address": addressTextEditingController.text.trim(),
+            "phone": phoneTextEditingController.text.trim(),
+          };
+          DatabaseReference userRef = FirebaseDatabase.instance.ref().child("users");
+          userRef.child(currentUser!.uid).set(userMap);
+        }
+        await Fluttertoast.showToast(msg: "Successfully Registered");
+        Navigator.push(context, MaterialPageRoute(builder: (c) => MainScreen()));
+      }).catchError((errorMessage) {
+        Fluttertoast.showToast(msg: "Error occured: \n $errorMessage}");
+      });
+    }
+    else{
+      Fluttertoast.showToast(msg: "Not all fields are valid");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -35,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       },
       child: Scaffold(
         body: ListView(
-          padding: EdgeInsets.all(0),
+          padding: const EdgeInsets.all(0),
           children: [
             Column(
               children: [
@@ -58,24 +94,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Form(
+                        key: _formKey,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            //Name
                             TextFormField(
                               inputFormatters: [
                                 LengthLimitingTextInputFormatter(50)
                               ],
                               decoration: InputDecoration(
                                 hintText: "Name",
-                                hintStyle: TextStyle(
+                                hintStyle: const TextStyle(
                                   color: Colors.grey,
                                 ),
                                 filled: true,
                                 fillColor: darkTheme ? Colors.black45 : Colors.grey.shade200,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(40),
-                                  borderSide: BorderSide(
+                                  borderSide: const BorderSide(
                                     width: 0,
                                     style: BorderStyle.none,
                                   )
@@ -88,17 +126,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   return "Name can't be empty";
                                 }
                                 if(text.length < 2) {
-                                  return "Pease enter a valid name";
+                                  return "Please enter a valid name";
                                 }
                                 if(text.length > 50){
                                   return "Name can't have more thant 50 letters";
                                 }
+                                return null;
                               },
                               onChanged: (text) => setState(() {
                                 nameTextEditingController.text = text;
                               })
                             ),
                             const SizedBox(height: 20),
+                            //Email
                             TextFormField(
                                 inputFormatters: [
                                   LengthLimitingTextInputFormatter(100)
@@ -124,7 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   if(EmailValidator.validate(text!) == true){
                                     return null;
                                   }
-                                  if(text == null || text.isEmpty){
+                                  if(text.isEmpty){
                                     return "email can't be empty";
                                   }
                                   if(text.length < 2) {
@@ -133,12 +173,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   if(text.length > 50){
                                     return "Email can't have more thant 100 characters";
                                   }
+                                  return null;
                                 },
                                 onChanged: (text) => setState(() {
                                   emailTextEditingController.text = text;
                                 })
                             ),
                             const SizedBox(height: 20),
+                            //PhoneNumber
                             IntlPhoneField(
                               showCountryFlag: false,
                               dropdownIcon: Icon(
@@ -165,12 +207,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 phoneTextEditingController.text = text.completeNumber;
                               }),
                             ),
+                            //Address
                             TextFormField(
                                 inputFormatters: [
                                   LengthLimitingTextInputFormatter(100)
                                 ],
                                 decoration: InputDecoration(
-                                    hintText: "Adress",
+                                    hintText: "Address",
                                     hintStyle: const TextStyle(
                                       color: Colors.grey,
                                     ),
@@ -188,20 +231,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 autovalidateMode: AutovalidateMode.onUserInteraction,
                                 validator: (text) {
                                   if(text == null || text.isEmpty){
-                                    return "Adress can't be empty";
+                                    return "Address can't be empty";
                                   }
                                   if(text.length < 2) {
-                                    return "Please enter a valid endress";
+                                    return "Please enter a valid address";
                                   }
                                   if(text.length > 50){
-                                    return "Adress can't have more thant 100 characters";
+                                    return "Address can't have more thant 100 characters";
                                   }
+                                  return null;
                                 },
                                 onChanged: (text) => setState(() {
                                   addressTextEditingController.text = text;
                                 })
                             ),
                             const SizedBox(height: 20),
+                            //Password
                             TextFormField(
                               obscureText: !_passwordVisible,
                                 inputFormatters: [
@@ -253,6 +298,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 })
                             ),
                             const SizedBox(height: 20),
+                            //ConfirmPassword
                             TextFormField(
                                 obscureText: !_passwordVisible,
                                 inputFormatters: [
@@ -294,7 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   if(text != passwordTextEditingController.text){
                                     return "Passwords do not match";
                                   }
-                                  if(text.length < 2) {
+                                  if(text.length < 6) {
                                     return "Please enter a valid password";
                                   }
                                   if(text.length > 50){
@@ -303,10 +349,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   return null;
                                 },
                                 onChanged: (text) => setState(() {
-                                  passwordTextEditingController.text = text;
+                                  confirmTextEditingController.text = text;
                                 })
                             ),
                             const SizedBox(height: 20),
+                            //RegisterButton
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 primary: darkTheme ? Colors.amber.shade400 : Colors.blue,
@@ -317,14 +364,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 minimumSize:  Size(double.infinity, 50)
                               ),
-                                onPressed: (){},
-                                child: Text(
+                                onPressed: (){
+                                _submit();
+                                },
+                                child: const Text(
                                   "Register",
                                   style: TextStyle(
                                     fontSize: 20
                                   ),
                                 ),
                             ),
+                            //ForgotPassword
                             const SizedBox(height: 20),
                             GestureDetector(
                             onTap:(){},
@@ -334,6 +384,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   color: darkTheme ? Colors.amber.shade400 : Colors.blue
                                 ),
                               ),
+                            ),
+                            //LoginButton
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                    "Have an account?",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                GestureDetector(
+                                  onTap: (){
+                                    Navigator.push(context, MaterialPageRoute(builder: (c) => LogInScreen()));
+                                  },
+                                  child: Text(
+                                    "Sign In",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: darkTheme ? Colors.amber.shade400 : Colors.blue
+                                    )
+                                  ),
+                                )
+                              ],
                             )
                           ],
                         ),
